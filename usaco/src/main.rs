@@ -1,39 +1,29 @@
-fn to_string_base(num: u32, base: u32) -> String {
-    let mut buffer = "".to_owned();
-    let mut p = num;
-    while p > 0 {
-        let rem = p % base;
-        p = p /base;
-        buffer.push_str(&rem.to_string());
-    }
-    
-    let result = buffer.chars().rev().collect::<String>();
-    return result;
-}
+mod palindrome;
 
-fn detect_palindrome(text: &String) -> bool{
-    let bytes = text.as_bytes();
-    let mut b = 0;
-    let mut e = bytes.len() - 1;
-    while e>b {
-        if bytes[b] != bytes[e] {
-            return false;
+fn first_word(s: &String) -> &str {
+    let bytes = s.as_bytes();
+
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' ' {
+            return &s[0..i];
         }
-
-        b = b + 1;
-        e = e - 1;
     }
-    return true;
+
+    let r = &s[..];
+    &s[..]
 }
 
 fn main() {
-    let base = 4;
+    palindrome::palindrome(5, 100);
+    // Binding `None` to a variable needs to be type annotated
+    let none: Option<i32> = None;
+    let _equivalent_none = None::<i32>;
 
-    for i in 1..100 {
-        let text = to_string_base(i, base);
-        if detect_palindrome(&text) {
-            println!("{}", text);
-        }
-    }
-    println!("Hello, world!");
+    let optional_float = Some(0f32);
+
+    // Unwrapping a `Some` variant will extract the value wrapped.
+    println!("{:?} unwraps to {:?}", optional_float, optional_float.unwrap());
+
+    // Unwrapping a `None` variant will `panic!`
+    println!("{:?} unwraps to {:?}", none, none.unwrap());
 }
