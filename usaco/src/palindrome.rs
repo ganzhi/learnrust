@@ -1,11 +1,15 @@
-fn to_string_base(num: u32, base: u32) -> String {
+static NUMBERS: [char; 20] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+
+pub fn to_string_base(base: u32, num: u32) -> String {
     // allocate a string with capacity of 25 for reducing memory operation
     let mut buffer = String::with_capacity(25);
     let mut p = num;
     while p > 0 {
         let rem = p % base;
         p = p /base;
-        buffer.push_str(&rem.to_string());
+        let chr = NUMBERS[rem as usize];
+        buffer.push(chr);
     }
     
     let result = buffer.chars().rev().collect::<String>();
@@ -27,32 +31,39 @@ fn detect_palindrome(text: &String) -> bool{
     return true;
 }
 
-pub fn palindrome(base: u32, upper: u32) -> Result<Vec<String>, &'static str> {
-    if base > 10 {
+pub fn palindrome(base: u32, value: u32) -> Result<String, &'static str> {
+    if base > 20 {
         return Err("Base is must be less than 11")
     }
-    let mut result: Vec<String> = Vec::new();
-    for i in 1..upper {
-        let text = to_string_base(i, base);
-        if detect_palindrome(&text) {
-            result.push(text);
-        }
+
+    let text = to_string_base(base, value);
+    if detect_palindrome(&text) {
+        return Ok(text);
     }
-    return Ok(result);
+    return Err("Not a palindrome");
 }
 
 #[cfg(test)]
 mod tests {
     use super::palindrome;
+    use super::to_string_base;
 
     #[test]
     fn test_palindrome() {
         let result = palindrome(5, 100);
-        let res = result.unwrap();
-        for l in &res {
-            println!("{}", l);
+        match result {
+            Ok(value) => {
+                panic!();
+            },
+            Err(_msg) => {
+                println!("{}", to_string_base(5, 100));
+            }
         }
-        assert_eq!(23, res.len());
-        assert_eq!("343", res[22]);
+    }
+
+    #[test]
+    fn test_to_string_base(){
+        let res = to_string_base(5, 100);
+        assert_eq!(res, "400");
     }
 }
