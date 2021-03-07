@@ -33,7 +33,7 @@ fn detect_palindrome(text: &String) -> bool{
 
 pub fn palindrome(base: u32, value: u32) -> Result<String, &'static str> {
     if base > 20 {
-        return Err("Base is must be less than 11")
+        return Err("Base must be less than 21")
     }
 
     let text = to_string_base(base, value);
@@ -51,19 +51,12 @@ mod tests {
     #[test]
     fn test_palindrome() {
         let result = palindrome(5, 100);
-        match result {
-            Ok(value) => {
-                panic!();
-            },
-            Err(_msg) => {
-                println!("{}", to_string_base(5, 100));
-            }
-        }
+        assert!(result.is_err(), "100 is not palindrome in base 5")
     }
 
     #[test]
     fn test_to_string_base(){
         let res = to_string_base(5, 100);
-        assert_eq!(res, "400");
+        assert_eq!(res, "400", "100 in base 5 should be '400'");
     }
 }
