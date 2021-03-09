@@ -15,4 +15,13 @@ fn main() {
     }
 
     println!("{}", palindrome::to_string_base(5, 100));
+
+    
+    let mut s = String::from("hello");
+    let r = &mut s;
+
+    r.push('1');
+    s.push('2');
+    println!("{}", s);
+    println!("{}", r);
 }

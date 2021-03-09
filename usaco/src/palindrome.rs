@@ -16,6 +16,10 @@ pub fn to_string_base(base: u32, num: u32) -> String {
     return result;
 }
 
+/// ```rust,should_panic
+/// // panics on division by zero
+/// assert_eq!(detect_palindrome("12321"), true);
+/// ```
 fn detect_palindrome(text: &String) -> bool{
     let bytes = text.as_bytes();
     let mut b = 0;
