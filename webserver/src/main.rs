@@ -15,9 +15,9 @@ mod config;
 fn main() {
     // Read configurations
     let args: Vec<String> = env::args().collect();
-    let conf: WebServerConfig;
+    let conf: Arc<WebServerConfig>;
     if args[1] == "--config" {
-        conf = config::WebServerConfig::new(&args[2]);
+        conf = Arc::new(config::WebServerConfig::new(&args[2]));
         println!("Root directory is: {}", conf.root);
     } else {
         panic!();
@@ -26,19 +26,21 @@ fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
     let pool = ThreadPool::new(4);
 
-    for stream in listener.incoming().take(2) {
-        let clone_conf = conf.clone();
+    for stream in listener.incoming().take(5) {
+        let clone_conf = Arc::clone(&conf);
         let stream = stream.unwrap();
 
         pool.execute(move || {
-            handle_connection(stream, clone_conf);
+            handle_connection(stream, clone_conf);            
         });
     }
 
     println!("Shutting down.");
 }
 
-fn handle_connection(mut stream: TcpStream, conf: WebServerConfig) {
+fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {    
+    println!("Arc strong count is {}", Arc::strong_count(&conf));
+
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
 
