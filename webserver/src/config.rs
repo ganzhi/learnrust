@@ -1,6 +1,7 @@
 use std::{fs::File, io::Read};
 use toml::Value;
 use toml::from_str;
+#[derive(Clone)]
 pub struct WebServerConfig {
     pub root: String
 }

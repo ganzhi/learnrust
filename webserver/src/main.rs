@@ -15,9 +15,9 @@ mod config;
 fn main() {
     // Read configurations
     let args: Vec<String> = env::args().collect();
-    let conf: Arc<WebServerConfig>;
+    let conf: WebServerConfig;
     if args[1] == "--config" {
-        conf = Arc::new(config::WebServerConfig::new(&args[2]));
+        conf = config::WebServerConfig::new(&args[2]);
         println!("Root directory is: {}", conf.root);
     } else {
         panic!();
@@ -27,17 +27,18 @@ fn main() {
     let pool = ThreadPool::new(4);
 
     for stream in listener.incoming().take(2) {
+        let clone_conf = conf.clone();
         let stream = stream.unwrap();
 
-        pool.execute(|| {
-            handle_connection(stream, Arc::clone(&conf));
+        pool.execute(move || {
+            handle_connection(stream, clone_conf);
         });
     }
 
     println!("Shutting down.");
 }
 
-fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
+fn handle_connection(mut stream: TcpStream, conf: WebServerConfig) {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
 
