@@ -1,9 +1,9 @@
 use std::{fs::File, io::Read};
-use toml::Value;
-use toml::from_str;
+
 #[derive(Clone)]
 pub struct WebServerConfig {
-    pub root: String
+    pub root: String,
+    pub listen_on: u32
 }
 
 impl WebServerConfig {
@@ -14,8 +14,22 @@ impl WebServerConfig {
         let config: toml::Value = toml::from_str(&contents).unwrap();
         let root = config["root"].as_str().unwrap();
         let root = root.to_string();
+
+        let listen_port = config["listen_on"].as_integer();
+        let port:u32;
+        match listen_port {
+            Some(p) => {
+                port = p
+            }
+            None => {
+                println!("Use the default port 80");
+                port=80
+            }
+        };
+        let root = root.to_string();
         WebServerConfig{
-            root
+            root,
+            listen_on:port
         }
     }
 }
