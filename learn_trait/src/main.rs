@@ -6,11 +6,11 @@ trait MyIter {
 
 struct MyIterator<'a, T:Clone> {
     index:usize,
-    vv: &'a Vec<T>
+    vv: &'a mut Vec<T>
 }
 
 impl<'a, T:Clone> MyIterator<'a, T> {
-    fn new(v: &'a Vec<T>) -> Self {
+    fn new(v: &'a mut Vec<T>) -> Self {
         MyIterator{index:0, vv:v}
     }
 }
@@ -40,8 +40,25 @@ impl<T:Clone> MyVec<T> {
         }
     }
 
-    fn iter<'a>(self: &'a Self) -> MyIterator<'a, T>{
-        MyIterator::new(&self.v)
+    fn iter<'a>(self: &'a mut Self) -> MyIterator<'a, T>{
+        MyIterator::new(&mut self.v)
+    }
+}
+
+use std::ops::Deref;
+use std::ops::DerefMut;
+
+impl<'a, T:Clone> Deref for MyIterator<'a, T>{
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.vv[self.index]
+    }
+}
+
+impl<'a, T:Clone> DerefMut for MyIterator<'a, T>{
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.vv[self.index]
     }
 }
 
@@ -75,7 +92,10 @@ fn main() {
     }
 
     let mut iter = myvect.iter();
+    println!("Original head element is {}", *iter);
+    
+    *iter = 99;
     while let Some(v) = iter.next() {
         println!("{}", v);
-    }
+    }    
 }
