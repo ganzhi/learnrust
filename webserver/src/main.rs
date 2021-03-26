@@ -10,6 +10,8 @@ use std::sync::Arc;
 use config::WebServerConfig;
 use webserver::ThreadPool;
 
+use num_cpus;
+
 mod config;
 
 fn main() {
@@ -24,7 +26,11 @@ fn main() {
     }
     
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
-    let pool = ThreadPool::new(4);
+    
+    let cpu_count = num_cpus::get();
+    println!("Number of CPU is: {}", cpu_count);
+    println!("Start {} threads", cpu_count);
+    let pool = ThreadPool::new(cpu_count);
 
     for stream in listener.incoming().take(5) {
         let clone_conf = Arc::clone(&conf);
