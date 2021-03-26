@@ -19,7 +19,7 @@ impl WebServerConfig {
         let port:u32;
         match listen_port {
             Some(p) => {
-                port = p
+                port = p as u32
             }
             None => {
                 println!("Use the default port 80");
