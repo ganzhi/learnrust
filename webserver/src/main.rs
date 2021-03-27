@@ -7,6 +7,8 @@ use std::time::Duration;
 use std::env;
 use std::sync::Arc;
 use std::path::Path;
+use log::{info, warn};
+use simplelog::*;
 
 use config::WebServerConfig;
 
@@ -17,23 +19,31 @@ use indoc::*;
 mod config;
 
 fn main() {
+    // Setup logger
+    CombinedLogger::init(
+        vec![
+            TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+            WriteLogger::new(LevelFilter::Info, Config::default(), fs::File::create("my_web_server.log").unwrap()),
+        ]
+    ).unwrap();
+
     // Read configurations
     let args: Vec<String> = env::args().collect();
     let conf: Arc<WebServerConfig>;
     if args[1] == "--config" {
         conf = Arc::new(config::WebServerConfig::new(&args[2]));
-        println!("Root directory is: {}", conf.root);
+        info!("Root directory is: {}", conf.root);
     } else {
         panic!();
     }
     
     let addr = "127.0.0.1:".to_owned() + &conf.listen_on.to_string();
-    println!("Listening on {}", addr);
+    info!("Listening on {}", addr);
     let listener = TcpListener::bind(addr).unwrap();
     
     let cpu_count = num_cpus::get();
-    println!("Number of CPU is: {}", cpu_count);
-    println!("Start {} threads", cpu_count);
+    info!("Number of CPU is: {}", cpu_count);
+    info!("Start {} threads", cpu_count);
     let pool = ThreadPool::new(cpu_count);
 
     for stream in listener.incoming().take(5) {
@@ -45,7 +55,7 @@ fn main() {
         });
     }
 
-    println!("Shutting down.");
+    info!("Shutting down.");
 }
 
 fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {    
@@ -97,13 +107,15 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
                     dir_content.push_str("<br/>\n");
                 },
                 Err(err) => {
-                    eprintln!("Found error {}", err);
+                    warn!("Found error {}", err);
                 }
             }
         }
-        dir_content.push_str("
-        </body>
-        </html>");
+        dir_content.push_str(indoc!{"
+                    </body>
+                </html>"
+            }
+        );
         
         let response = format!("{}{}", status_line, dir_content);
         stream.write(response.as_bytes()).unwrap();
