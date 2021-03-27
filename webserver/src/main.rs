@@ -8,9 +8,9 @@ use std::env;
 use std::sync::Arc;
 
 use config::WebServerConfig;
-use webserver::ThreadPool;
 
 use num_cpus;
+use threadpool::ThreadPool;
 
 mod config;
 
@@ -25,7 +25,9 @@ fn main() {
         panic!();
     }
     
-    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let addr = "127.0.0.1:".to_owned() + &conf.listen_on.to_string();
+    println!("Listening on {}", addr);
+    let listener = TcpListener::bind(addr).unwrap();
     
     let cpu_count = num_cpus::get();
     println!("Number of CPU is: {}", cpu_count);
