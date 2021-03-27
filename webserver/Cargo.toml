@@ -11,3 +11,4 @@ toml = "0.5.8"
 serde = { version = "1.0", features = ["derive"] }
 threadpool = { version = "1.8.1"}
 num_cpus = { version = "1.13.0"}
+indoc = "1.0"

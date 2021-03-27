@@ -6,11 +6,13 @@ use std::thread;
 use std::time::Duration;
 use std::env;
 use std::sync::Arc;
+use std::path::Path;
 
 use config::WebServerConfig;
 
 use num_cpus;
 use threadpool::ThreadPool;
+use indoc::*;
 
 mod config;
 
@@ -56,7 +58,7 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
     let sleep = b"GET /sleep HTTP/1.1\r\n";
 
     let (status_line, filename) = if buffer.starts_with(get) {
-        ("HTTP/1.1 200 OK\r\n\r\n","hello.html")
+        ("HTTP/1.1 200 OK\r\n\r\n","index.html")
     } else if buffer.starts_with(sleep) {
         thread::sleep(Duration::from_secs(5));
         ("HTTP/1.1 200 OK\r\n\r\n", "hello.html")
@@ -67,11 +69,44 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
     // Prefix file name with root
     let mut root =  conf.root.to_owned();
     root.push_str(filename);
+    if Path::new(&root).exists() {
+        let contents = fs::read_to_string(root).unwrap();
 
-    let contents = fs::read_to_string(root).unwrap();
-
-    let response = format!("{}{}", status_line, contents);
-
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+        let response = format!("{}{}", status_line, contents);
+    
+        stream.write(response.as_bytes()).unwrap();
+        stream.flush().unwrap();
+    } else {
+        let mut dir_content = String::from(
+            indoc!{
+                "<!DOCTYPE html>
+                <html lang='en'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>Hello!</title>
+                </head>
+                <body>
+                "
+            }
+        );
+        let rd = fs::read_dir(&conf.root).unwrap();
+        for entry in rd {
+            match entry {
+                Ok(e) => {
+                    dir_content.push_str(e.path().to_str().unwrap());
+                    dir_content.push_str("<br/>\n");
+                },
+                Err(err) => {
+                    eprintln!("Found error {}", err);
+                }
+            }
+        }
+        dir_content.push_str("
+        </body>
+        </html>");
+        
+        let response = format!("{}{}", status_line, dir_content);
+        stream.write(response.as_bytes()).unwrap();
+        stream.flush().unwrap();
+    }
 }
