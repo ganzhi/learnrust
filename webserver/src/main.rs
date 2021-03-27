@@ -7,7 +7,7 @@ use std::time::Duration;
 use std::env;
 use std::sync::Arc;
 use std::path::Path;
-use log::{info, warn};
+use log::{info, warn, error};
 use simplelog::*;
 
 use config::WebServerConfig;
@@ -62,7 +62,18 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
     println!("Arc strong count is {}", Arc::strong_count(&conf));
 
     let mut buffer = [0; 1024];
-    stream.read(&mut buffer).unwrap();
+    match stream.read(&mut buffer) {
+        Ok(s) => {
+            info!("Read {} bytes from request", s);
+            let s = String::from_utf8_lossy(&buffer[0..s]);
+            info!("Got tis request {}", s)
+        }
+        Err(_) => {
+            error!("Can't read from the input stream");
+            return;
+        }
+    }
+
 
     let get = b"GET / HTTP/1.1\r\n";
     let sleep = b"GET /sleep HTTP/1.1\r\n";
