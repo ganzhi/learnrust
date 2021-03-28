@@ -1,7 +1,7 @@
 use std::net::TcpStream;
 use std::io::prelude::*;
 
-use log::{info, warn, error, debug};
+use log::{info, error, debug};
 
 pub struct HttpRequest {
     pub url: String,
@@ -33,7 +33,7 @@ impl HttpRequest{
         }
         let mut lines = reqstr.split('\n');
         let firstline = lines.next();
-        let mut url:String;
+        let url:String;
         let verb:String;
         match firstline {
             Some(fl) => {
