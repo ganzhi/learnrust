@@ -20,5 +20,7 @@ jobs:
       run: cargo build --verbose
       working-directory: webserver
     - name: Run tests
-      run: cargo test --verbose
+      run: |
+        cargo run -- --config conf/config.toml &
+        cargo test --verbose
       working-directory: webserver
