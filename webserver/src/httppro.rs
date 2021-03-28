@@ -11,26 +11,26 @@ pub struct HttpRequest {
 impl HttpRequest{
     pub fn new(stream: &mut TcpStream) -> Result<HttpRequest, String>{
         let mut buffer = [0; 1024];
-        let reqstr:String;
-        match stream.read(&mut buffer) {
+        let reqstr = match stream.read(&mut buffer) {
             Ok(l) => {
                 info!("Read {} bytes from request", l);
                 match String::from_utf8(buffer[0..l].to_vec()){
-                    Ok(s) => {
-                        reqstr = s;
-                        debug!("Got this request {}", reqstr);
-                    }
+                    Ok(s) => s,
                     Err(e) => {
-                        error!("Failed to parse request due to {}", e);
-                        return Err(String::from(""));
+                        let msg = format!("Failed to parse request due to {}", e);
+                        error!("{}", msg);
+                        return Err(msg);
                     }
                 }
             }
             Err(_) => {
-                error!("Can't read from the input stream");
-                return Err(String::from(""))
+                let msg = format!("Can't read from the input stream");                
+                error!("{}", msg);
+                return Err(msg);
             }
-        }
+        };
+        debug!("Got this request {}", reqstr);
+
         let mut lines = reqstr.split('\n');
         let firstline = lines.next();
         let url:String;
@@ -38,29 +38,29 @@ impl HttpRequest{
         match firstline {
             Some(fl) => {
                 info!("Received request line: {}", fl);
-                let mut words = fl.split_ascii_whitespace();
-                let first_w = words.next();
-                match first_w {
+                let mut words = fl.split_ascii_whitespace();                
+                match words.next() {
                     Some(v) => {
                         if v != "GET" {
-                            error!("Only GET is supported but we got {}", v);
-                            return Err(String::from(""));
+                            let msg = format!("Only GET is supported but we got {}", v);
+                            error!("{}", msg);
+                            return Err(msg);
                         }
                         verb = v.to_string();
                     }
                     None => {
-                        error!("Request line is malformed. Abort processing!");
-                        return Err(String::from(""));
+                        let msg = format!("Request line is malformed. Abort processing!");
+                        error!("{}", msg);
+                        return Err(msg);
                     }
                 }
-                let res = words.next();
-                match res {
-                    Some(u) => {
-                        url = String::from(u);
-                    }
+                
+                url = match words.next() {
+                    Some(u) => String::from(u),                    
                     None => {
-                        error!("Request line is malformed. Abort processing!");
-                        return Err(String::from(""));
+                        let msg = format!("Request line is malformed. Abort processing!");
+                        error!("{}", msg);
+                        return Err(msg);
                     }
                 }          
             }
@@ -74,5 +74,28 @@ impl HttpRequest{
             url,
             verb
         })
+    }
+}
+
+pub struct HttpResponse {
+    pub response: String,
+}
+
+impl HttpResponse {
+    pub fn send_response(&mut self, stream: &mut TcpStream) -> std::io::Result<()>{
+        let bytes = self.response.as_bytes();
+        let mut pos = 0;
+        while pos < bytes.len()-1 {
+            let l = stream.write(&bytes[pos..])?;
+            if l == 0 {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::WriteZero,
+                    "failed to write the buffered data",
+                ));
+            }
+            pos += l;
+            stream.flush()?;
+        }
+        Ok(())
     }
 }
