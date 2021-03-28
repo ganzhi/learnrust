@@ -1,6 +1,4 @@
-use std::io::prelude::*;
-use std::net::TcpListener;
-use std::net::TcpStream;
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::fs;
 use std::env;
 use std::sync::Arc;
@@ -49,7 +47,7 @@ fn main() {
 
     for stream in listener.incoming() {
         let clone_conf = Arc::clone(&conf);
-        let stream = match stream{
+        let mut stream = match stream{
             Ok(s) => s,
             Err(_) => {
                 error!("Connection Failed");
@@ -58,26 +56,20 @@ fn main() {
         };
 
         pool.execute(move || {
-            handle_connection(stream, clone_conf);            
+            if let Err(e) = handle_connection(&mut stream, clone_conf){
+                error!("Failed to handle connection due to: {}", e);
+                stream.shutdown(Shutdown::Both).ok();
+            }
         });
     }
 
     info!("Shutting down.");
 }
 
-fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {    
+fn handle_connection(stream: &mut TcpStream, conf: Arc<WebServerConfig>)-> std::io::Result<()> {    
     println!("Arc strong count is {}", Arc::strong_count(&conf));
 
-    let r : HttpRequest;
-    match httppro::HttpRequest::new(&mut stream){
-        Ok(req) => {
-            r = req;
-        }
-        Err(e) => {
-            error!("Failed to parse http request {}", e);
-            return;
-        }
-    }
+    let r = httppro::HttpRequest::new(stream)?;
 
     info!("Now start processing request for URL {}", r.url);
 
@@ -124,18 +116,19 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
             );
             
             let response = format!("{}{}", status_line, dir_content);
-            HttpResponse{response}.send_response(&mut stream).unwrap_or_default();
+            HttpResponse{response}.send_response(stream)?;
         } else {
-            let contents = fs::read_to_string(path).unwrap();
+            let contents = fs::read_to_string(path)?;
 
             let response = format!("{}{}", status_line, contents);        
-            HttpResponse{response}.send_response(&mut stream).unwrap_or_default();
+            HttpResponse{response}.send_response(stream).unwrap_or_default();
         }
     } else {
         let status_line = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
         let contents = fs::read_to_string(root.join("404.html")).unwrap();
 
         let response = format!("{}{}", status_line, contents);    
-        HttpResponse{response}.send_response(&mut stream).unwrap_or_default();
+        HttpResponse{response}.send_response(stream)?;
     }
+    return Ok(());
 }
