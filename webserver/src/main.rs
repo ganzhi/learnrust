@@ -7,7 +7,7 @@ use std::time::Duration;
 use std::env;
 use std::sync::Arc;
 use std::path::Path;
-use log::{info, warn, error};
+use log::{info, warn, error, debug};
 use simplelog::*;
 
 use config::WebServerConfig;
@@ -62,73 +62,117 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
     println!("Arc strong count is {}", Arc::strong_count(&conf));
 
     let mut buffer = [0; 1024];
+    let reqstr:String;
     match stream.read(&mut buffer) {
-        Ok(s) => {
-            info!("Read {} bytes from request", s);
-            let s = String::from_utf8_lossy(&buffer[0..s]);
-            info!("Got tis request {}", s)
+        Ok(l) => {
+            info!("Read {} bytes from request", l);
+            match String::from_utf8(buffer[0..l].to_vec()){
+                Ok(s) => {
+                    reqstr = s;
+                    debug!("Got this request {}", reqstr);
+                }
+                Err(e) => {
+                    error!("Failed to parse request due to {}", e);
+                    return;
+                }
+            }
         }
         Err(_) => {
             error!("Can't read from the input stream");
             return;
         }
     }
+    let mut lines = reqstr.split('\n');
+    let firstline = lines.next();
+    let url:String;
+    match firstline {
+        Some(fl) => {
+            info!("Received request line: {}", fl);
+            let mut words = fl.split_ascii_whitespace();
+            let verb = words.next();
+            match verb {
+                Some(v) => {
+                    if v != "GET" {
+                        error!("Only GET is supported but we got {}", v)
+                    }
+                }
+                None => {
+                    error!("Request line is malformed. Abort processing!");
+                    return;
+                }
+            }
+            let res = words.next();
+            match res {
+                Some(u) => {
+                    url = String::from(u);
+                }
+                None => {
+                    error!("Request line is malformed. Abort processing!");
+                    return;
+                }
+            }          
+        }
+        None => {
+            error!("No line in the request. Abort processing");
+            return;
+        }
+    }
 
-
-    let get = b"GET / HTTP/1.1\r\n";
-    let sleep = b"GET /sleep HTTP/1.1\r\n";
-
-    let (status_line, filename) = if buffer.starts_with(get) {
-        ("HTTP/1.1 200 OK\r\n\r\n","index.html")
-    } else if buffer.starts_with(sleep) {
-        thread::sleep(Duration::from_secs(5));
-        ("HTTP/1.1 200 OK\r\n\r\n", "hello.html")
-    } else {
-        ("HTTP/1.1 404 NOT FOUND\r\n\r\n", "404.html")
-    };
+    info!("Now start processing request for URL {}", url);
 
     // Prefix file name with root
-    let mut root =  conf.root.to_owned();
-    root.push_str(filename);
-    if Path::new(&root).exists() {
-        let contents = fs::read_to_string(root).unwrap();
+    let root = Path::new(&conf.root);
+    let path = root.join(url);
+    if path.exists() {
+        let status_line = "HTTP/1.1 200 OK\r\n\r\n";
+        if path.is_dir() {
+            let mut dir_content = String::from(
+                indoc!{
+                    "<!DOCTYPE html>
+                    <html lang='en'>
+                    <head>
+                        <meta charset='utf-8'>
+                        <title>Hello!</title>
+                    </head>
+                    <body>
+                    "
+                }
+            );
+            let rd = fs::read_dir(&conf.root).unwrap();
+            for entry in rd {
+                match entry {
+                    Ok(e) => {
+                        dir_content.push_str(e.path().to_str().unwrap());
+                        dir_content.push_str("<br/>\n");
+                    },
+                    Err(err) => {
+                        warn!("Found error {}", err);
+                    }
+                }
+            }
+            dir_content.push_str(indoc!{"
+                        </body>
+                    </html>"
+                }
+            );
+            
+            let response = format!("{}{}", status_line, dir_content);
+            stream.write(response.as_bytes()).unwrap();
+            stream.flush().unwrap();
+        } else {
+            let contents = fs::read_to_string(path).unwrap();
+
+            let response = format!("{}{}", status_line, contents);
+        
+            stream.write(response.as_bytes()).unwrap();
+            stream.flush().unwrap();
+        }
+    } else {
+        let status_line = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
+        let contents = fs::read_to_string(root.join("404.html")).unwrap();
 
         let response = format!("{}{}", status_line, contents);
     
-        stream.write(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
-    } else {
-        let mut dir_content = String::from(
-            indoc!{
-                "<!DOCTYPE html>
-                <html lang='en'>
-                <head>
-                    <meta charset='utf-8'>
-                    <title>Hello!</title>
-                </head>
-                <body>
-                "
-            }
-        );
-        let rd = fs::read_dir(&conf.root).unwrap();
-        for entry in rd {
-            match entry {
-                Ok(e) => {
-                    dir_content.push_str(e.path().to_str().unwrap());
-                    dir_content.push_str("<br/>\n");
-                },
-                Err(err) => {
-                    warn!("Found error {}", err);
-                }
-            }
-        }
-        dir_content.push_str(indoc!{"
-                    </body>
-                </html>"
-            }
-        );
-        
-        let response = format!("{}{}", status_line, dir_content);
         stream.write(response.as_bytes()).unwrap();
         stream.flush().unwrap();
     }
