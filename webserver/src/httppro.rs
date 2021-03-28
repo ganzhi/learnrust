@@ -76,3 +76,26 @@ impl HttpRequest{
         })
     }
 }
+
+pub struct HttpResponse {
+    pub response: String,
+}
+
+impl HttpResponse {
+    pub fn send_response(&mut self, stream: &mut TcpStream) -> std::io::Result<()>{
+        let bytes = self.response.as_bytes();
+        let mut pos = 0;
+        while pos < bytes.len()-1 {
+            let l = stream.write(&bytes[pos..])?;
+            if l == 0 {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::WriteZero,
+                    "failed to write the buffered data",
+                ));
+            }
+            pos += l;
+            stream.flush()?;
+        }
+        Ok(())
+    }
+}

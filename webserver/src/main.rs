@@ -17,7 +17,7 @@ use indoc::*;
 mod config;
 mod httppro;
 
-use httppro::HttpRequest;
+use httppro::{HttpRequest, HttpResponse};
 
 fn main() {
     // Setup logger
@@ -47,9 +47,15 @@ fn main() {
     info!("Start {} threads", cpu_count);
     let pool = ThreadPool::new(cpu_count);
 
-    for stream in listener.incoming().take(5) {
+    for stream in listener.incoming() {
         let clone_conf = Arc::clone(&conf);
-        let stream = stream.unwrap();
+        let stream = match stream{
+            Ok(s) => s,
+            Err(_) => {
+                error!("Connection Failed");
+                continue;
+            }
+        };
 
         pool.execute(move || {
             handle_connection(stream, clone_conf);            
@@ -118,23 +124,18 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
             );
             
             let response = format!("{}{}", status_line, dir_content);
-            stream.write(response.as_bytes()).unwrap();
-            stream.flush().unwrap();
+            HttpResponse{response}.send_response(&mut stream).unwrap_or_default();
         } else {
             let contents = fs::read_to_string(path).unwrap();
 
-            let response = format!("{}{}", status_line, contents);
-        
-            stream.write(response.as_bytes()).unwrap();
-            stream.flush().unwrap();
+            let response = format!("{}{}", status_line, contents);        
+            HttpResponse{response}.send_response(&mut stream).unwrap_or_default();
         }
     } else {
         let status_line = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
         let contents = fs::read_to_string(root.join("404.html")).unwrap();
 
-        let response = format!("{}{}", status_line, contents);
-    
-        stream.write(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
+        let response = format!("{}{}", status_line, contents);    
+        HttpResponse{response}.send_response(&mut stream).unwrap_or_default();
     }
 }
