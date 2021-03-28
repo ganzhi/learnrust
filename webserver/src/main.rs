@@ -2,8 +2,6 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::fs;
-use std::thread;
-use std::time::Duration;
 use std::env;
 use std::sync::Arc;
 use std::path::Path;
@@ -17,6 +15,9 @@ use threadpool::ThreadPool;
 use indoc::*;
 
 mod config;
+mod httppro;
+
+use httppro::HttpRequest;
 
 fn main() {
     // Setup logger
@@ -61,68 +62,23 @@ fn main() {
 fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {    
     println!("Arc strong count is {}", Arc::strong_count(&conf));
 
-    let mut buffer = [0; 1024];
-    let reqstr:String;
-    match stream.read(&mut buffer) {
-        Ok(l) => {
-            info!("Read {} bytes from request", l);
-            match String::from_utf8(buffer[0..l].to_vec()){
-                Ok(s) => {
-                    reqstr = s;
-                    debug!("Got this request {}", reqstr);
-                }
-                Err(e) => {
-                    error!("Failed to parse request due to {}", e);
-                    return;
-                }
-            }
+    let r : HttpRequest;
+    match httppro::HttpRequest::new(&mut stream){
+        Ok(req) => {
+            r = req;
         }
-        Err(_) => {
-            error!("Can't read from the input stream");
-            return;
-        }
-    }
-    let mut lines = reqstr.split('\n');
-    let firstline = lines.next();
-    let mut url:String;
-    match firstline {
-        Some(fl) => {
-            info!("Received request line: {}", fl);
-            let mut words = fl.split_ascii_whitespace();
-            let verb = words.next();
-            match verb {
-                Some(v) => {
-                    if v != "GET" {
-                        error!("Only GET is supported but we got {}", v)
-                    }
-                }
-                None => {
-                    error!("Request line is malformed. Abort processing!");
-                    return;
-                }
-            }
-            let res = words.next();
-            match res {
-                Some(u) => {
-                    url = String::from(u);
-                }
-                None => {
-                    error!("Request line is malformed. Abort processing!");
-                    return;
-                }
-            }          
-        }
-        None => {
-            error!("No line in the request. Abort processing");
+        Err(e) => {
+            error!("Failed to parse http request {}", e);
             return;
         }
     }
 
-    info!("Now start processing request for URL {}", url);
+    info!("Now start processing request for URL {}", r.url);
 
     // Prefix file name with root
     let root = Path::new(&conf.root);
     debug!("Serving content from root: {}", &root.to_str().unwrap());
+    let mut url = r.url.clone();
     if url.starts_with('/') {
         url.remove(0);
     }
