@@ -22,7 +22,7 @@ fn main() {
     // Setup logger
     CombinedLogger::init(
         vec![
-            TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+            TermLogger::new(LevelFilter::Debug, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
             WriteLogger::new(LevelFilter::Info, Config::default(), fs::File::create("my_web_server.log").unwrap()),
         ]
     ).unwrap();
@@ -84,7 +84,7 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
     }
     let mut lines = reqstr.split('\n');
     let firstline = lines.next();
-    let url:String;
+    let mut url:String;
     match firstline {
         Some(fl) => {
             info!("Received request line: {}", fl);
@@ -122,7 +122,12 @@ fn handle_connection(mut stream: TcpStream, conf: Arc<WebServerConfig>) {
 
     // Prefix file name with root
     let root = Path::new(&conf.root);
+    debug!("Serving content from root: {}", &root.to_str().unwrap());
+    if url.starts_with('/') {
+        url.remove(0);
+    }
     let path = root.join(url);
+    debug!("Trying to find path {}", &path.to_str().unwrap());
     if path.exists() {
         let status_line = "HTTP/1.1 200 OK\r\n\r\n";
         if path.is_dir() {
