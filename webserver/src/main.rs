@@ -69,7 +69,13 @@ fn main() {
 fn handle_connection(stream: &mut TcpStream, conf: Arc<WebServerConfig>)-> std::io::Result<()> {    
     println!("Arc strong count is {}", Arc::strong_count(&conf));
 
-    let r = httppro::HttpRequest::new(stream)?;
+    let r = match httppro::HttpRequest::new(stream) {
+        Ok(r) => r,
+        Err(e) => {
+            error!("{}", e);
+            return Err(e);
+        }
+    };
 
     info!("Now start processing request for URL {}", r.url);
 
