@@ -19,6 +19,7 @@ impl HttpRequest{
                     Err(e) => {
                         let msg = format!("Failed to parse request due to {}", e);
                         error!("{}", msg);
+                        println!("{:x?}", &buffer[0..l]);
                         return Err(std::io::Error::new(
                             std::io::ErrorKind::InvalidData,
                             msg,
