@@ -1,44 +1,28 @@
-// use macro_rules! <name of macro>{<Body>}
-macro_rules! add{
-    // macth like arm for macro
-       ($a:expr,$b:expr)=>{
-    // macro expand to this code
+macro_rules! ok_or_return{
+    // match something(q,r,t,6,7,8) etc
+    // compiler extracts function name and arguments. It injects the values in respective varibles.
+        ($a:ident($($b:tt)*))=>{
            {
-   // $a and $b will be templated using the value/variable provided to macro
-               $a+$b
-           }
-       }
-   }
-
-   macro_rules! add_as{
-    // using a ty token type for macthing datatypes passed to maccro
-        ($a:expr,$b:expr,$typ:ty)=>{
-            $a as $typ + $b as $typ
+            match $a($($b)*) {
+                Ok(value)=>value,
+                Err(err)=>{
+                    return Err(err);
+                }
+            }
+            }
+        };
+    }
+    
+    fn some_work(i:i64,j:i64)->Result<(i64,i64),String>{
+        if i+j>2 {
+            Ok((i,j))
+        } else {
+            Err("error".to_owned())
         }
     }
-
-    macro_rules! add_more{
-        (
-      // repeated block
-      $($a:expr)
-     // seperator
-       ,
-    // zero or more
-       *
-       ) => {
-           { 
-       // to handle the case without any arguments
-       0
-       // block to be repeated
-       $(+$a)*
-         }
-        }
+    
+    fn main()->Result<(),String>{
+        ok_or_return!(some_work(1,4));
+        ok_or_return!(some_work(1,0));
+        Ok(())
     }
-   
-   fn main(){
-    // call to macro, $a=1 and $b=2
-       let r = add!(1,2);
-       println!("This is {}", r);
-       println!("Add as result {}",add_as!(0,2,u8));
-       println!("Add more result {}",add_more!(1,2,3,4)); // => println!("{}",{0+1+2+3+4})
-   }
