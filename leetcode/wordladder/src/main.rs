@@ -6,6 +6,7 @@ struct Solution {
 
 // Paste below
 use std::collections::HashSet;
+use std::collections::HashMap;
 impl Solution {
     fn is_adjcent(s1: &String, s2: &String) -> bool {
         let s1 = s1.as_bytes();
@@ -30,13 +31,31 @@ impl Solution {
         src.insert(begin_word.clone());
         let mut tgt = HashSet::new();
         let mut end_count = 0;
-        for word in word_list.iter() {
+        let mut graph = HashMap::<String, HashSet<String>>::new(); 
+        for word in word_list.iter() {            
+            if *word == begin_word {
+                continue;
+            }
             if *word == end_word {
                 end_count +=1;
-                continue;;
             }
-            if *word != begin_word {
-                tgt.insert(word.clone());
+            tgt.insert(word.clone());
+            
+            for i in 0..word.len() {
+                let mut cloned_bytes = word.clone().into_bytes();
+                cloned_bytes[i] = b'*';
+                let root = String::from_utf8(cloned_bytes).unwrap();
+                match graph.get_mut(&root) {
+                    Some(v) =>{
+                        v.insert(word.clone());
+                    },
+                    None => {
+                        let mut same_root = HashSet::new();
+                        same_root.insert(word.clone());
+                        graph.insert(root, same_root);
+                    },
+                }
+                
             }
         }
         if end_count == 0 {
@@ -48,20 +67,32 @@ impl Solution {
             round += 1;
             let mut next = HashSet::new();
             for s_word in src.iter(){
-                if Solution::is_adjcent(&s_word, &end_word) {
-                    return round;
-                }
-                for t_word in tgt.iter() {
-                    if Solution::is_adjcent(&s_word, t_word) {    
-                         println!("{} and {} is adjcent", s_word, t_word);
-                        next.insert(t_word.clone());
+                for i in 0..s_word.len() {
+                    let mut cloned_bytes = s_word.clone().into_bytes();
+                    cloned_bytes[i] = b'*';
+                    let root = String::from_utf8(cloned_bytes).unwrap();
+                    match graph.get_mut(&root) {
+                        Some(v) =>{
+                            for neighbour in v.iter(){
+                                if tgt.contains(neighbour) {
+                                    if *neighbour == end_word {
+                                        return round;
+                                    }
+                                    tgt.remove(neighbour);
+                                    next.insert(neighbour.clone());
+                                }
+                            }
+                        },
+                        None => {},
                     }
+                    
                 }
             }
+            //println!("Next is {:?}, target is {:?}", next, tgt);
             if next.len() == 0 {
                 return 0;
             }
-             println!("Next is {:?}", next);
+            
             for n_word in next.iter() {
                 tgt.remove(n_word);
             }
