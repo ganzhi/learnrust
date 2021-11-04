@@ -27,30 +27,38 @@ impl Solution {
             }
         }
 
-        loop {
-            let mut modifed = false;
-            for value in graph.values(){
-                let mut v = value.borrow_mut();
-                let len = v.len();
-                v.retain(|&k| graph.contains_key(&k));
-                if v.len() != len {
-                    modifed = true;
+        let mut checked = HashSet::<i32>::new();
+
+        for (k, v) in graph.iter(){
+            if checked.contains(k) {
+                continue;
+            }
+            let mut visited = HashSet::<i32>::new();
+            let mut queue = Vec::<i32>::new();
+            queue.push(*k);
+            while !queue.is_empty() {
+                let next = queue.pop().unwrap();
+                checked.insert(next);
+                if visited.contains(&next) {
+                    return false;
+                }
+                visited.insert(next);
+                if let Some(neighbours) = graph.get(&next) {
+                    for i in neighbours.borrow().iter() {
+                        if visited.contains(i) {
+                            return false;
+                        }
+                        queue.push(*i);
+                    }
                 }
             }
-            graph.retain(|_, v| !v.borrow().is_empty());
-
-            if graph.is_empty() {
-                return true;
-            }
-
-            if !modifed {
-                return false;
-            }
         }
+        true
     }
 }
 
 fn main() {
-    assert!(Solution::can_finish(2, vec![vec![1, 0]]));
-    assert!(!Solution::can_finish(2, vec![vec![1, 0], vec![0, 1]]));
+    // assert!(Solution::can_finish(2, vec![vec![1, 0]]));
+    // assert!(!Solution::can_finish(2, vec![vec![1, 0], vec![0, 1]]));
+    assert!(Solution::can_finish(2, vec![vec![1,4], vec![2,4], vec![3,1], vec![3,2]]));    
 }
