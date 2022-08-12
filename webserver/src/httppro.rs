@@ -9,6 +9,47 @@ pub struct HttpRequest {
 }
 
 impl HttpRequest{
+    fn parse_first_line(fl: &str) -> Result<(String, String), Error>{
+        info!("Received request line: {}", fl);
+        let mut words = fl.split_ascii_whitespace();
+        let verb;
+        match words.next() {
+            Some(v) => {
+                if v != "GET" {
+                    let msg = format!("Only GET is supported but we got {}", v);
+                    error!("{}", msg);
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        msg,
+                    ));
+                }
+                verb = v.to_string();
+            }
+            None => {
+                let msg = format!("Request line is malformed. Abort processing!");
+                error!("{}", msg);
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    msg,
+                ));
+            }
+        }
+        
+        let url = match words.next() {
+            Some(u) => String::from(u),                    
+            None => {
+                let msg = format!("Request line is malformed. Abort processing!");
+                error!("{}", msg);
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    msg,
+                ));
+            }
+        };
+
+        return Ok((verb, url));
+    }
+
     pub fn new(stream: &mut TcpStream) -> Result<HttpRequest, Error>{
         let mut buffer = [0; 1024];
         let reqstr = match stream.read(&mut buffer) {
@@ -40,41 +81,7 @@ impl HttpRequest{
         let verb:String;
         match firstline {
             Some(fl) => {
-                info!("Received request line: {}", fl);
-                let mut words = fl.split_ascii_whitespace();                
-                match words.next() {
-                    Some(v) => {
-                        if v != "GET" {
-                            let msg = format!("Only GET is supported but we got {}", v);
-                            error!("{}", msg);
-                            return Err(std::io::Error::new(
-                                std::io::ErrorKind::InvalidData,
-                                msg,
-                            ));
-                        }
-                        verb = v.to_string();
-                    }
-                    None => {
-                        let msg = format!("Request line is malformed. Abort processing!");
-                        error!("{}", msg);
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            msg,
-                        ));
-                    }
-                }
-                
-                url = match words.next() {
-                    Some(u) => String::from(u),                    
-                    None => {
-                        let msg = format!("Request line is malformed. Abort processing!");
-                        error!("{}", msg);
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            msg,
-                        ));
-                    }
-                }          
+                (verb, url) = HttpRequest::parse_first_line(fl).unwrap();
             }
             None => {
                 let msg = "No line in the request. Abort processing";

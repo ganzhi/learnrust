@@ -29,7 +29,7 @@ fn main() {
     // Read configurations
     let args: Vec<String> = env::args().collect();
     let conf: Arc<WebServerConfig>;
-    if args[1] == "--config" {
+    if args.len()== 3 && args[1] == "--config" {
         conf = Arc::new(config::WebServerConfig::new(&args[2]));
         info!("Root directory is: {}", conf.root);
     } else {
