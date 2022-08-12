@@ -11,7 +11,12 @@ hyper = { version = "0.14", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
 pretty_env_logger = "0.4"
+futures = "0.3"
 
 [[bin]]
 name = "unsafet"           # The name of the target.
 path = "src/unsafet.rs"    # The source file of the target.
+
+[[bin]]
+name = "select"
+path = "src/select.rs"
