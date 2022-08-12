@@ -9,3 +9,4 @@ Start the test with below command:
 TODO:
 1. Make directory clickable
 2. Convert to use async style
+3. Keep connection alive
