@@ -14,6 +14,7 @@ use indoc::*;
 
 mod config;
 mod httppro;
+mod fileop;
 
 use httppro::{HttpRequest, HttpResponse};
 
@@ -91,35 +92,7 @@ fn handle_connection(stream: &mut TcpStream, conf: Arc<WebServerConfig>)-> std::
     if path.exists() {
         let status_line = "HTTP/1.1 200 OK\r\n\r\n";
         if path.is_dir() {
-            let mut dir_content = String::from(
-                indoc!{
-                    "<!DOCTYPE html>
-                    <html lang='en'>
-                    <head>
-                        <meta charset='utf-8'>
-                        <title>Hello!</title>
-                    </head>
-                    <body>
-                    "
-                }
-            );
-            let rd = fs::read_dir(&conf.root).unwrap();
-            for entry in rd {
-                match entry {
-                    Ok(e) => {
-                        dir_content.push_str(e.path().to_str().unwrap());
-                        dir_content.push_str("<br/>\n");
-                    },
-                    Err(err) => {
-                        warn!("Found error {}", err);
-                    }
-                }
-            }
-            dir_content.push_str(indoc!{"
-                        </body>
-                    </html>"
-                }
-            );
+            let dir_content = fileop::dir_to_html(path.as_path());
             
             let response = format!("{}{}", status_line, dir_content);
             HttpResponse{response}.send_response(stream)?;
