@@ -1,9 +1,10 @@
 use std::fs;
+use std::fmt::{format};
 use std::path::Path;
 use indoc::*;
 use log::{info, warn, error, debug};
 
-pub fn dir_to_html(path: &Path) -> String{
+pub fn dir_to_html(path: &Path, url:String) -> String{
     let mut dir_content = String::from(
         indoc!{
             "<!DOCTYPE html>
@@ -17,11 +18,16 @@ pub fn dir_to_html(path: &Path) -> String{
         }
     );
     let rd = fs::read_dir(path).unwrap();
+    let path = Path::new(&url);
     for entry in rd {
         match entry {
             Ok(e) => {
-                dir_content.push_str(e.path().to_str().unwrap());
-                dir_content.push_str("<br/>\n");
+                let p = e.file_name();
+                let path_str = p.to_str().unwrap();
+                let href = format!("<a href={}>", path.join(path_str).to_str().unwrap());
+                dir_content.push_str(&href);
+                dir_content.push_str(path_str);
+                dir_content.push_str("</a><br/>\n");
             },
             Err(err) => {
                 warn!("Found error {}", err);

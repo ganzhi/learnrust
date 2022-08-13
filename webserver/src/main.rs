@@ -10,7 +10,7 @@ use config::WebServerConfig;
 
 use num_cpus;
 use threadpool::ThreadPool;
-use indoc::*;
+
 
 mod config;
 mod httppro;
@@ -87,12 +87,12 @@ fn handle_connection(stream: &mut TcpStream, conf: Arc<WebServerConfig>)-> std::
     if url.starts_with('/') {
         url.remove(0);
     }
-    let path = root.join(url);
+    let path = root.join(url.clone());
     debug!("Trying to find path {}", &path.to_str().unwrap());
     if path.exists() {
         let status_line = "HTTP/1.1 200 OK\r\n\r\n";
         if path.is_dir() {
-            let dir_content = fileop::dir_to_html(path.as_path());
+            let dir_content = fileop::dir_to_html(path.as_path(), url);
             
             let response = format!("{}{}", status_line, dir_content);
             HttpResponse{response}.send_response(stream)?;
