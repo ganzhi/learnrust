@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>hello-wasm example</title>
+  </head>
+  <body>
+    <script src="./index.js"></script>
+
+    <input type="file" id="file-selector" multiple>
+    <script>
+      const fileSelector = document.getElementById('file-selector');
+      function readfile(file) {
+        const reader = new FileReader();
+        reader.addEventListener('load', (event) => {
+          console.log('worker: res', res);
+        });
+        reader.readAsArrayBuffer(file);
+      }
+      fileSelector.addEventListener('change', (event) => {
+        const fileList = event.target.files;
+        console.log(fileList);
+        for (const file of fileList) {
+          readfile(file);
+        }
+      });
+    </script>
+
+  </body>
+</html>
