@@ -20,3 +20,7 @@ path = "src/unsafet.rs"    # The source file of the target.
 [[bin]]
 name = "select"
 path = "src/select.rs"
+
+[[bin]]
+name = "simple"
+path = "src/simple.rs"
