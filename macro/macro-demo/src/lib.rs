@@ -2,14 +2,17 @@
 extern crate proc_macro;
 use proc_macro::{TokenStream};
 use quote::{quote};
-use syn::{parse_macro_input, ItemFn, Ident, Token, Expr, Pat, Local, parse_quote, Stmt};
+use syn::{parse_macro_input, ItemFn, Ident, Token, Expr, Pat, Local, parse_quote, Stmt, Visibility};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use std::collections::HashSet;
+use std::fmt;
 use syn::Result;
 use syn::fold;
 use syn::fold::Fold;
 use quote::ToTokens;
+mod matrix;
+use matrix::*;
 
 
 // using proc_macro_attribute to declare an attribute like procedural macro
@@ -146,6 +149,27 @@ pub fn trace_vars(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemFn);
     let mut args= parse_macro_input!(metadata as Args);
     let output = args.fold_item_fn(input);
+
+    TokenStream::from(quote!(#output))
+}
+
+fn vis_to_str(vis: &Visibility) -> &str {
+    match *vis{
+        Visibility::Public(_) => "Public",
+        Visibility::Crate(_) => "Create",
+        Visibility::Restricted(_) => "Restricted",
+        Visibility::Inherited => "Inherited"
+    }
+}
+
+#[proc_macro_attribute]
+pub fn matrix(metadata: TokenStream, input: TokenStream) -> TokenStream {
+// parsing rust function to easy to use struct
+    println!("List of tokens: {}", input);
+    let input = parse_macro_input!(input as ItemFn);
+    println!("Visibility of function is: {}", vis_to_str(&input.vis));
+    let mut args= parse_macro_input!(metadata as MatrixArgs);
+    let output = args.fold_item_fn(input);    
 
     TokenStream::from(quote!(#output))
 }
