@@ -1,4 +1,5 @@
 use macro_demo::*;
+use std::collections::HashSet;
 
 // macro converts struct S to struct H
 #[my_custom_attribute]
@@ -20,5 +21,24 @@ fn do_something(){
 #[test]
 fn test_macro1(){
 // due to macro we have struct H in scope
-    do_something();
+  let demo=H{};
+  do_something();
+}
+
+macro_rules! set {
+    ( $($a:expr),*) => {
+      {
+        let mut s = HashSet::new();
+        $(
+          s.insert($a);
+        )*
+        s
+      }
+    };
+}
+
+#[test]
+fn test_set_macro(){
+  let s = set![1,2,3+8];
+  print!("{:?}", s);
 }
