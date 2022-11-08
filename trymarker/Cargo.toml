@@ -14,3 +14,7 @@ tokio = { version = "1", features = ["full"] }
 [[bin]]
 name = "timedfuture"
 path = "src/timedfuture.rs"
+
+[[bin]]
+name = "operator"
+path = "src/operator.rs"
